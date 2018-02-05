@@ -1,0 +1,66 @@
+#!/usr/bin/python3  
+import pymysql
+import types
+
+# 这个类不能直接执行，应该通过其他的脚本去调用
+db = pymysql.connect("localhost", "root", "123456", "test")
+cursor = db.cursor()
+
+# 创建baidu表
+def create():
+    cursor.execute("drop table if exists baidu")
+    sql = """CREATE TABLE IF NOT EXISTS `baidu` ( 
+          `id` int(11) NOT NULL AUTO_INCREMENT, 
+          `name` varchar(255) NOT NULL, 
+          `url` varchar(255) NOT NULL, 
+          PRIMARY KEY (`id`) 
+          ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=0"""
+    cursor.execute(sql)
+
+# baidu插入数据
+def insert():
+    sql = """INSERT INTO `baidu` (`name`, `url`) VALUES ('test1', 1)"""
+    try:
+        # 执行sql语句
+        cursor.execute(sql)
+        # 提交到数据库执行
+        db.commit()
+        return True
+    except:
+        # 如果发生错误则回滚
+        db.rollback()
+        return False
+
+# 更新
+def update():
+    id = 1
+    sql = "update baidu set url=100 where id='%s'" % (id)
+    try:
+        cursor.execute(sql)
+        db.commit()
+    except:
+        db.rollback()
+
+# 删除
+def delete():
+    id = 2
+    sql = "delete from baidu where id='%s'" % (id)
+    try:
+        cursor.execute(sql)
+        db.commit()
+    except:
+        db.rollback()
+
+# 查询
+def select():
+    cursor.execute("select * from baidu")
+
+    results = cursor.fetchall()
+
+    for row in results:
+        name = row[0]
+        url = row[1]
+        # print(type(row[1])) #打印变量类型 <class 'str'>
+
+        print("name=%s,url=%s" % \
+              (url, name))
