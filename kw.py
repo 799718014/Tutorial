@@ -1,5 +1,5 @@
 # -*- coding:utf-8 -*-
-#python 2.7
+#python 3.6
 #XiaoDeng
 #http://tieba.baidu.com/p/2460150866
 #标签操作
