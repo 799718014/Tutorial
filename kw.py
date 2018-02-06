@@ -7,8 +7,7 @@
 
 from bs4 import BeautifulSoup
 import urllib.request
-from dbbaidu import select,insert
-import re
+import xlwt
 
 def get_content(url):
     #如果是网址，可以用这个办法来读取网页
@@ -47,35 +46,24 @@ def getkeylist(url1):
         listall.extend(lister)
     return listall
 
-
 # main
 if __name__ == '__main__':
-    url1 = "http://www.baidu.com/s?ie=utf-8&wd=%E6%99%BA%E8%83%BD%E6%89%8B%E7%8E%AF"
+    word = input("Input key word: ")
+    url1 = "http://www.baidu.com/s?ie=utf-8&wd="+urllib.parse.quote(word)
     listall = getkeylist(url1)  #获取所有相关关键词
+    print("数据插入开始")
 
-    #sql语句
-    sql2 = """INSERT INTO `baidu` (`name`, `url`) VALUES """
-    sql1 = ""
-    i=0
-    #循环列表插入数据库
+    wbk = xlwt.Workbook()
+    sheet = wbk.add_sheet('sheet 1')
+    # indexing is zero based, row then column
+    sheet.write(0, 0, '关键词')
+    sheet.write(0, 1, 'url')
+    i = 1;
     for item in listall:
-        if(i==0):
-            sql1 += """('""" + item[1] + """', '""" + item[0] + """')"""
-        else:
-            sql1 += """,('""" + item[1] + """', '""" + item[0] + """')"""
+        print(item)
+        sheet.write(i, 0, item[1])
+        sheet.write(i, 1, item[0])
+        i += 1;
+    wbk.save(word+'.xls')  # 默认保存在桌面上
 
-        i+=1;
-        break
-
-    sql = sql1
-    print("开始插入数据")
-    print(sql)
-    # 插入数据库
-    res = insert(sql)
-    if(res):
-        print("抓取成功")
-    else:
-        print("抓取失败")
-
-#查询数据库
-# select()
+    print("数据插入成功")
