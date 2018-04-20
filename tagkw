@@ -1,0 +1,149 @@
+# -*- coding:utf-8 -*-
+#python 3.6
+#XiaoDeng
+#http://tieba.baidu.com/p/2460150866
+#标签操作
+
+
+from bs4 import BeautifulSoup
+import urllib.request
+import xlwt
+import pymysql
+
+
+def get_content(url):
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:23.0) Gecko/20100101 Firefox/23.0'}
+    print(url)
+    #如果是网址，可以用这个办法来读取网页
+    html_doc = url
+    req = urllib.request.Request(url=html_doc, headers=headers)
+
+    page = urllib.request.urlopen(req)
+    #如果获取页面源码失败。跳过，进行下一个页面的获取
+    try:
+        html = page.read().decode('utf-8')
+        soup = BeautifulSoup(html, 'html.parser')  # 文档对象
+        ids = soup.find(id="rs")  # 查找id=rs的代码
+
+        lists = []  # 字典
+        i = 0
+        # 类名为xxx而且文本内容为hahaha的div
+        for k in ids.find_all('a'):  # ,string='更多'
+            title = k.get_text()
+            lists.append(title)
+            i += 1
+
+        return lists;
+    except:
+        html = ''
+        return False
+
+'''
+#获取所有相关关键词
+def getkeylist(url1):
+    listall = []  # 全部关键词
+    lister = []  # 二级相关关键词
+    # 跟据网址获取相关关键词
+    lists = get_content(url1)
+    for item in lists:
+        # 获取二级相关关键词
+        lister = get_content(item[0])
+        # 把目标关键词加到列表
+        lister.append(item)
+        # 把两个列表合并成一个列表
+        listall.extend(lister)
+    return listall
+'''
+
+# 查询
+def select():
+    cursor.execute("SELECT * FROM `uu_article` WHERE  `istag` = 0 LIMIT 100")
+    results = cursor.fetchall()
+    data = [];      #定义队列
+    for row in results:
+        title = row[5]
+        id = row[0]
+        #url = row[1]
+        # print(type(row[1])) #打印变量类型 <class 'str'>
+        data.append([title,id])
+
+    return data
+
+# baidu插入数据
+def insert(taglist,aid):
+    res = ''
+    #循环9个关联tag，并插入数据库
+    for i in taglist:
+        sql0 = "SELECT * FROM `uu_tagindex` WHERE  `tag` = %s" % (i);
+        cursor.execute("SELECT * FROM `uu_tagindex` WHERE  `tag` = '%s'" % (i))
+        res0 = cursor.fetchone()
+        if res0:
+            #如果有这个tag只建立文章和标签的关系
+            sql1 = """INSERT INTO `uu_taglist` (`tid`,`aid`,`tag`) VALUES (%s,%s,%s)"""
+            print([res0[0], aid, i])
+            try:
+                res1 = cursor.execute(sql1, (res0[0], aid, i))
+                # 提交到数据库执行
+                db.commit()
+            except:
+                # 如果发生错误则回滚
+                db.rollback()
+        else:
+            # 如果没有这个tag，新增tag和建立文章和标签的关系
+            sql = """INSERT INTO `uu_tagindex` (`tag`) VALUES ('"""+i+"""')"""
+            try:
+                # 执行sql语句
+                res = cursor.execute(sql)
+                if  res:
+                    tid = cursor.lastrowid
+                    #添加uu_taglist表关系
+                    #sql1 = """INSERT INTO `uu_taglist` (`tid`,`aid`,`tag`) VALUES ('"""+tid+"""','"""+aid+"""','"""+i+"""')"""
+                    sql1 = """INSERT INTO `uu_taglist` (`tid`,`aid`,`tag`) VALUES (%s,%s,%s)"""
+                    res1 = cursor.execute(sql1,(tid,aid,i))
+                    #更新文章标识，证明已有标签
+                    if res1:
+                        # 提交到数据库执行
+                        db.commit()
+                    else:
+                        # 如果发生错误则回滚
+                        db.rollback()
+                #return True
+            except:
+                # 如果发生错误则回滚
+                db.rollback()
+                return False
+
+    return True
+
+#更新文章信息
+def updateart(aid):
+    try:
+        sql2 = "update uu_article set istag=1 where id='%s'" % (aid)
+        res2 = cursor.execute(sql2)
+        # 提交到数据库执行
+        db.commit()
+        return True
+    except:
+        # 如果发生错误则回滚
+        db.rollback()
+        return False
+
+# main
+if __name__ == '__main__':
+    print("hello world")
+    # 获取文章数据
+    db = pymysql.connect(host="localhost",user="root",password="123456",db="uu_cai",port=3306,charset='utf8')
+    cursor = db.cursor()
+    art_list = select()
+    #print(art_list)
+    #获取百度9个相关tag
+    for item in art_list:
+        url1 = "https://www.baidu.com/s?wd=" + urllib.parse.quote(item[0])
+        taglist = get_content(url1)
+        if taglist:
+            #把相关标签插入tag表
+            insert(taglist,item[1]);            #两个参数，1：标题相关的9个tag；2：文章id
+        #更新文章状态
+        updateart(item[1])
+
+    print("完成")
